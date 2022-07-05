@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 
 namespace ScanApp
 {
@@ -6,7 +7,20 @@ namespace ScanApp
     {
         static void Main(string[] args)
         {
-            Console.WriteLine("Hello World!");
+            if (args.Length < 1)
+            {
+                Console.WriteLine("ERR: [FolderPath] is required.");
+                return;
+            }
+
+            var folderPath = args[0];
+            if (!Directory.Exists(folderPath))
+            {
+                Console.WriteLine("ERR: [FolderPath] doesn't exist.");
+                return;
+            }
+
+
         }
     }
 }
