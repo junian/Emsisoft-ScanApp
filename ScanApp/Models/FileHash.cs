@@ -11,7 +11,13 @@ namespace ScanApp.Models
         public string MD5 { get; set; }
         public string SHA1 { get; set; }
         public string SHA256 { get; set; }
+
+        public long FileSize { get; set; }
+
         public bool IsError { get; set; }
         public string ErrorMessage { get; set; }
+
+        public DateTime? LastSeen { get; set; }
+        public int Scanned { get; set; }
     }
 }
