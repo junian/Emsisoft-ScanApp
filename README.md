@@ -2,10 +2,10 @@
 
 Console .NET Core app to scan all files in a specific folder
 - [x] Accept folder path as an argument
-- [ ] Enumerate files in folder and subfolders
-- [ ] Calculate md5,sha1,sha256 hashes for each file
-- [ ] Print to console the number of files scanned and the total time
-- [ ] Compile app for Windows and macOS platform
+- [x] Enumerate files in folder and subfolders
+- [x] Calculate md5,sha1,sha256 hashes for each file
+- [x] Print to console the number of files scanned and the total time
+- [x] Compile app for Windows and macOS platform
 
 
 
