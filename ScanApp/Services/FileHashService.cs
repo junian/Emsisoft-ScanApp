@@ -30,7 +30,7 @@ namespace ScanApp.Services
         {
             using (var stream = File.OpenRead(filePath))
             {
-                return MD5(filePath);
+                return MD5(stream);
             }
         }
 
@@ -50,7 +50,7 @@ namespace ScanApp.Services
         {
             using (var stream = File.OpenRead(filePath))
             {
-                return SHA1(filePath);
+                return SHA1(stream);
             }
         }
 
@@ -70,7 +70,7 @@ namespace ScanApp.Services
         {
             using(var stream = File.OpenRead(filePath))
             {
-                return SHA256(filePath);
+                return SHA256(stream);
             }
         }
 
