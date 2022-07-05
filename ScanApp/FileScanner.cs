@@ -36,6 +36,7 @@ namespace ScanApp
                 var fileHash = new FileHash
                 {
                     FilePath = file,
+                    FileSize = new FileInfo(file).Length,
                 };
 
                 report.FileHashList.Add(fileHash);
