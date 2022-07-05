@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.IO;
 
 namespace ScanApp
@@ -20,7 +21,18 @@ namespace ScanApp
                 return;
             }
 
+            var timer = new Stopwatch();
+            timer.Start();
+            
+            var fileScanner = new FileScanner();
+            var task = fileScanner.StartScanAsync(folderPath);
+            task.Wait();
+            var result = task.Result;
 
+            timer.Stop();
+            Console.WriteLine($"Total File(s)     : {result.TotalFiles}");
+            Console.WriteLine($"Total Error(s)    : {result.TotalErrors}");
+            Console.WriteLine($"Total Time        : {timer.Elapsed.ToString()}");
         }
     }
 }
