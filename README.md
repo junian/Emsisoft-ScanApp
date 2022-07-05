@@ -17,6 +17,6 @@ Optional features
 
 
 
-Example of usage:
+Example of usage:   
 - Windows: ScanApp C:\Program Files (x86)
 - Linux: ScanApp /etc
