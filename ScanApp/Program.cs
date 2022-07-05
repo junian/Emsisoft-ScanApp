@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using System.IO;
+using Serilog;
 
 namespace ScanApp
 {
@@ -8,16 +9,26 @@ namespace ScanApp
     {
         static void Main(string[] args)
         {
+            var log = new LoggerConfiguration()
+                .ReadFrom.AppSettings()
+                .CreateLogger();
+
+            var errorMessage = string.Empty;
+
             if (args.Length < 1)
             {
-                Console.WriteLine("ERR: [FolderPath] is required.");
+                errorMessage = "[FolderPath] is required.";
+                Console.WriteLine($"ERR: {errorMessage}");
+                log.Error(errorMessage);
                 return;
             }
 
             var folderPath = args[0];
             if (!Directory.Exists(folderPath))
             {
-                Console.WriteLine("ERR: [FolderPath] doesn't exist.");
+                errorMessage = "[FolderPath] doesn't exist.";
+                Console.WriteLine($"ERR: {errorMessage}");
+                log.Error(errorMessage);
                 return;
             }
 

@@ -4,13 +4,18 @@ using System.IO;
 using System.Threading.Tasks;
 using ScanApp.Models;
 using ScanApp.Services;
+using Serilog;
 
 namespace ScanApp
 {
     public class FileScanner
     {
+        private ILogger _log;
         public FileScanner()
         {
+            _log = new LoggerConfiguration()
+                .ReadFrom.AppSettings()
+                .CreateLogger();
         }
 
         public async Task<FileScannerReport> StartScanAsync(string rootPath)
@@ -46,6 +51,7 @@ namespace ScanApp
                     report.TotalErrors++;
                     fileHash.IsError = true;
                     fileHash.ErrorMessage = ex.ToString();
+                    _log.Error(ex.ToString());
                 }
             });
 
@@ -53,4 +59,3 @@ namespace ScanApp
         }
     }
 }
-

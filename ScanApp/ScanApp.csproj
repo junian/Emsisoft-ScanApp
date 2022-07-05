@@ -5,4 +5,15 @@
     <TargetFramework>netcoreapp3.1</TargetFramework>
   </PropertyGroup>
 
+  <ItemGroup>
+    <None Remove="Serilog" />
+    <None Remove="Serilog.Sinks.File" />
+    <None Remove="Serilog.Settings.AppSettings" />
+    <None Remove="MvvmReady" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Serilog" Version="2.11.0" />
+    <PackageReference Include="Serilog.Sinks.File" Version="5.0.0" />
+    <PackageReference Include="Serilog.Settings.AppSettings" Version="2.2.2" />
+  </ItemGroup>
 </Project>
