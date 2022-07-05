@@ -16,8 +16,5 @@ namespace ScanApp.Models
 
         public bool IsError { get; set; }
         public string ErrorMessage { get; set; }
-
-        public DateTime? LastSeen { get; set; }
-        public int Scanned { get; set; }
     }
 }

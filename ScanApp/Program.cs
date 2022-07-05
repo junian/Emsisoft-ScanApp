@@ -32,18 +32,28 @@ namespace ScanApp
                 return;
             }
 
+            log.Information($"Start scanning files ...");
+
             var timer = new Stopwatch();
             timer.Start();
             
             var fileScanner = new FileScanner();
+
             var task = fileScanner.StartScanAsync(folderPath);
             task.Wait();
+
             var result = task.Result;
+
+            /*
+            var result = fileScanner.StartScan(folderPath);
+            */
 
             timer.Stop();
             Console.WriteLine($"Total File(s)     : {result.TotalFiles}");
-            Console.WriteLine($"Total Error(s)    : {result.TotalErrors}");
+            // Console.WriteLine($"Total Error(s)    : {result.TotalErrors}");
             Console.WriteLine($"Total Time        : {timer.Elapsed.ToString()}");
+
+            log.Information($"File scanning finished in {timer.Elapsed.ToString()}.");
         }
     }
 }
