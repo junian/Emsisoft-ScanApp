@@ -18,7 +18,7 @@
 
   <ItemGroup>
     <None Update="scanapp.db">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
     </None>
   </ItemGroup>
 

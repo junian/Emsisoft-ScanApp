@@ -9,7 +9,7 @@ using ScanApp;
 namespace ScanApp.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20220705135041_InitialCreate")]
+    [Migration("20220706004430_InitialCreate")]
     partial class InitialCreate
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -62,8 +62,7 @@ namespace ScanApp.Migrations
 
                     b.HasIndex("Sha1");
 
-                    b.HasIndex("Sha256")
-                        .IsUnique();
+                    b.HasIndex("Sha256");
 
                     b.ToTable("ScanResults");
                 });

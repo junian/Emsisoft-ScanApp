@@ -35,8 +35,7 @@ namespace ScanApp
                 .HasIndex(p => p.Sha1);
 
             modelBuilder.Entity<ScanResult>()
-                .HasIndex(p => p.Sha256)
-                .IsUnique();
+                .HasIndex(p => p.Sha256);
 
             modelBuilder.Entity<ScanResult>()
                 .HasIndex(p => p.CacheKey);

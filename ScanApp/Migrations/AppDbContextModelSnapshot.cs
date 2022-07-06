@@ -60,8 +60,7 @@ namespace ScanApp.Migrations
 
                     b.HasIndex("Sha1");
 
-                    b.HasIndex("Sha256")
-                        .IsUnique();
+                    b.HasIndex("Sha256");
 
                     b.ToTable("ScanResults");
                 });

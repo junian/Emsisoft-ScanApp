@@ -47,8 +47,7 @@ namespace ScanApp.Migrations
             migrationBuilder.CreateIndex(
                 name: "IX_ScanResults_Sha256",
                 table: "ScanResults",
-                column: "Sha256",
-                unique: true);
+                column: "Sha256");
         }
 
         protected override void Down(MigrationBuilder migrationBuilder)
