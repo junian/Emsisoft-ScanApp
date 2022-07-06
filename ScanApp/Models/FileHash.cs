@@ -16,5 +16,7 @@ namespace ScanApp.Models
 
         public bool IsError { get; set; }
         public string ErrorMessage { get; set; }
+
+        public string CacheKey { get; set; }
     }
 }

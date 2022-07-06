@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
 using ScanApp.Models;
 using ScanApp.Services;
 using Serilog;
@@ -49,9 +50,15 @@ namespace ScanApp
 
         public async Task<FileScannerReport> StartScanAsync(string rootPath)
         {
+            using(var db = new AppDbContext())
+            {
+                await db.Database.EnsureCreatedAsync();
+            }
+
             var fileList = new List<BlockingCollection<string>>();
 
             var maxThreads = Environment.ProcessorCount > 2 ? Environment.ProcessorCount : 2;
+            var threadsInProcess = maxThreads;
             var iterator = 0;
 
             for(var i=0; i < maxThreads; i++)
@@ -61,6 +68,9 @@ namespace ScanApp
 
             var report = new FileScannerReport { };
 
+            var dbQueue = new BlockingCollection<FileHash> { };
+
+            // Calculate Hash for each file.
             var processAction = new Action<BlockingCollection<string>>((collection) =>
             {
                 while (!collection.IsCompleted)
@@ -78,8 +88,13 @@ namespace ScanApp
                         Process(report, data);
                     }
                 }
+
+                Interlocked.Decrement(ref threadsInProcess);
+                if (threadsInProcess <= 0)
+                    dbQueue.CompleteAdding();
             });
 
+            // Get all files
             var gatheringFilesAction = new Action(() =>
             {
                 var queue = new Queue<string>();
@@ -116,6 +131,7 @@ namespace ScanApp
             });
 
             var taskList = new List<Task> { };
+
             for(var i=0; i<maxThreads; i++)
             {
                 var collection = fileList[i];
@@ -130,28 +146,76 @@ namespace ScanApp
             return report;
         }
 
-        private void Process(FileScannerReport report, string file)
+        private async void Process(FileScannerReport report, string file, BlockingCollection<FileHash> dbQueue = null)
         {
-            var fileHash = new FileHash
+            using (var db = new AppDbContext())
             {
-                FilePath = file,
-                FileSize = new FileInfo(file).Length,
-            };
+                var fileHash = new FileHash
+                {
+                    FilePath = file,
+                    FileSize = new FileInfo(file).Length,
+                    CacheKey = _hashService.SHA256Content(file),
+                };
 
-            report.FileHashList.Add(fileHash);
+                var currentResult = await db.ScanResults.FirstOrDefaultAsync(x => x.CacheKey == fileHash.CacheKey);
 
-            try
-            {
-                fileHash.MD5 = _hashService.MD5(file);
-                fileHash.SHA1 = _hashService.SHA1(file);
-                fileHash.SHA256 = _hashService.SHA256(file);
-            }
-            catch (Exception ex)
-            {
-                report.TotalErrors += 1;
-                fileHash.IsError = true;
-                fileHash.ErrorMessage = ex.ToString();
-                _log.Error(ex.ToString());
+                var skip = false;
+
+                if(currentResult != null)
+                {
+                    // If same file path and file size and exist in database, just skip and do increment
+                    if (fileHash.FilePath == currentResult.FilePath && fileHash.FileSize == currentResult.FileSize)
+                    {
+                        _log.Information($"Skipping [{file}] because already scanned.");
+                        currentResult.LastSeen = DateTime.Now;
+                        currentResult.Scanned += 1;
+
+                        skip = true;
+                    }
+                    // Same path but different file size, could be different file.
+                    else
+                    {
+                        db.ScanResults.Remove(currentResult);
+                    }
+                }
+
+                await db.SaveChangesAsync();
+
+                if (skip)
+                    return;
+
+                report.FileHashList.Add(fileHash);
+
+                try
+                {
+                    fileHash.MD5 = _hashService.MD5(file);
+                    fileHash.SHA1 = _hashService.SHA1(file);
+                    fileHash.SHA256 = _hashService.SHA256(file);
+                }
+                catch (Exception ex)
+                {
+                    report.TotalErrors += 1;
+                    fileHash.IsError = true;
+                    fileHash.ErrorMessage = ex.ToString();
+                    _log.Error(ex.ToString());
+                }
+
+            
+                await db.ScanResults.AddAsync(new ScanResult
+                {
+                    MD5 = fileHash.MD5,
+                    Sha1 = fileHash.SHA1,
+                    Sha256 = fileHash.SHA256,
+                    FilePath = fileHash.FilePath,
+                    FileSize = fileHash.FileSize,
+                    ErrorMessage = fileHash.ErrorMessage,
+                    IsError = fileHash.IsError,
+                    Scanned = 1,
+                    LastSeen = DateTime.Now,
+                    CacheKey = _hashService.SHA256Content(fileHash.FilePath),
+                });
+
+                await db.SaveChangesAsync();
             }
         }
 
