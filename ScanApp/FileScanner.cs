@@ -89,7 +89,7 @@ namespace ScanApp
 
             // This thread is responsible to scan all files in directory and sub-directories.
             // Send the file list to processAction to be processed.
-            var gatheringFilesAction = new Func<Task<int>>(() =>
+            var gatheringFilesAction = new Action(() =>
             {
                 var queue = new Queue<string>();
                 queue.Enqueue(rootPath);
@@ -120,8 +120,7 @@ namespace ScanApp
                 {
                     fileList[i].CompleteAdding();
                 }
-
-                return Task.FromResult(0);
+                
             });
 
             var taskList = new List<Task> { };
@@ -130,10 +129,10 @@ namespace ScanApp
             {
                 var collection = fileList[i];
 
-                taskList.Add(processAction(collection));
+                taskList.Add(Task.Run(() => processAction(collection)));
             }
 
-            taskList.Add(gatheringFilesAction());
+            taskList.Add(Task.Run(gatheringFilesAction));
 
             await Task.WhenAll(taskList);
 
