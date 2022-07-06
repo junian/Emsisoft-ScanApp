@@ -25,6 +25,7 @@ namespace ScanApp
             _hashService = new FileHashService();
         }
 
+        // Old function before database.
         public FileScannerReport StartScan(string rootPath)
         {
 
@@ -37,12 +38,9 @@ namespace ScanApp
 
             report.TotalFiles = files.LongLength;
 
-            Parallel.ForEach(files, file =>
+            Parallel.ForEach(files, async (file) =>
             {
-                //ClearLastLine();
-                //Console.WriteLine($"Processing {file}");
-
-                Process(report, file);    
+                await ProcessAsync(report, file);    
             });
 
             return report;
@@ -50,6 +48,7 @@ namespace ScanApp
 
         public async Task<FileScannerReport> StartScanAsync(string rootPath)
         {
+            // Make sure database is created if not.
             using(var db = new AppDbContext())
             {
                 await db.Database.EnsureCreatedAsync();
@@ -58,7 +57,6 @@ namespace ScanApp
             var fileList = new List<BlockingCollection<string>>();
 
             var maxThreads = Environment.ProcessorCount > 2 ? Environment.ProcessorCount : 2;
-            var threadsInProcess = maxThreads;
             var iterator = 0;
 
             for(var i=0; i < maxThreads; i++)
@@ -68,10 +66,9 @@ namespace ScanApp
 
             var report = new FileScannerReport { };
 
-            var dbQueue = new BlockingCollection<FileHash> { };
-
-            // Calculate Hash for each file.
-            var processAction = new Action<BlockingCollection<string>>((collection) =>
+            // This thread is responsible to process file hashing.
+            // And also to update the result in database.
+            var processAction = new Func<BlockingCollection<string>, Task>(async (collection) =>
             {
                 while (!collection.IsCompleted)
                 {
@@ -85,17 +82,14 @@ namespace ScanApp
 
                     if (data != null)
                     {
-                        Process(report, data);
+                        await ProcessAsync(report, data);
                     }
                 }
-
-                Interlocked.Decrement(ref threadsInProcess);
-                if (threadsInProcess <= 0)
-                    dbQueue.CompleteAdding();
             });
 
-            // Get all files
-            var gatheringFilesAction = new Action(() =>
+            // This thread is responsible to scan all files in directory and sub-directories.
+            // Send the file list to processAction to be processed.
+            var gatheringFilesAction = new Func<Task<int>>(() =>
             {
                 var queue = new Queue<string>();
                 queue.Enqueue(rootPath);
@@ -112,7 +106,6 @@ namespace ScanApp
                     {
                         fileList[iterator].Add(file);
                         iterator = (iterator + 1) % maxThreads;
-                        //Console.WriteLine(iterator);
                     }
 
                     var dirs = Directory.GetDirectories(currentDir);
@@ -127,7 +120,8 @@ namespace ScanApp
                 {
                     fileList[i].CompleteAdding();
                 }
-                
+
+                return Task.FromResult(0);
             });
 
             var taskList = new List<Task> { };
@@ -136,17 +130,17 @@ namespace ScanApp
             {
                 var collection = fileList[i];
 
-                taskList.Add(Task.Run(() => processAction(collection)));
+                taskList.Add(processAction(collection));
             }
 
-            taskList.Add(Task.Run(gatheringFilesAction));
+            taskList.Add(gatheringFilesAction());
 
             await Task.WhenAll(taskList);
 
             return report;
         }
 
-        private async void Process(FileScannerReport report, string file, BlockingCollection<FileHash> dbQueue = null)
+        private async Task ProcessAsync(FileScannerReport report, string file)
         {
             using (var db = new AppDbContext())
             {
@@ -157,13 +151,15 @@ namespace ScanApp
                     CacheKey = _hashService.SHA256Content(file),
                 };
 
+                // Let's see if it's scanned in the past.
                 var currentResult = await db.ScanResults.FirstOrDefaultAsync(x => x.CacheKey == fileHash.CacheKey);
 
                 var skip = false;
 
+                // File already scanned before, so let's check it before re-hash.
                 if(currentResult != null)
                 {
-                    // If same file path and file size and exist in database, just skip and do increment
+                    // If same file path and file size and exist in database, just skip and do increment.
                     if (fileHash.FilePath == currentResult.FilePath && fileHash.FileSize == currentResult.FileSize)
                     {
                         _log.Information($"Skipping [{file}] because already scanned.");
@@ -173,6 +169,7 @@ namespace ScanApp
                         skip = true;
                     }
                     // Same path but different file size, could be different file.
+                    // Let's remove it from DB and re-hash the file.
                     else
                     {
                         db.ScanResults.Remove(currentResult);
@@ -186,6 +183,7 @@ namespace ScanApp
 
                 report.FileHashList.Add(fileHash);
 
+                // Calculate file hashes
                 try
                 {
                     fileHash.MD5 = _hashService.MD5(file);
@@ -200,7 +198,7 @@ namespace ScanApp
                     _log.Error(ex.ToString());
                 }
 
-            
+                // Insert scan result to database.
                 await db.ScanResults.AddAsync(new ScanResult
                 {
                     MD5 = fileHash.MD5,
@@ -217,13 +215,6 @@ namespace ScanApp
 
                 await db.SaveChangesAsync();
             }
-        }
-
-        public void ClearLastLine()
-        {
-            Console.SetCursorPosition(0, Console.CursorTop - 1);
-            Console.Write(new string(' ', Console.BufferWidth));
-            Console.SetCursorPosition(0, Console.CursorTop - 1);
         }
     }
 }
